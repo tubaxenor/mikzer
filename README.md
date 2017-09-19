@@ -1,2 +1,2 @@
 # mikzer
-A simple audio mixer
+A simple audio recorder & mixer
