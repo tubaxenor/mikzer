@@ -91,6 +91,7 @@ audio {
   margin: 1rem 0.5rem;
 }
 
+
 .clip p {
   display: inline-block;
   font-size: 1rem;
@@ -100,6 +101,13 @@ audio {
   font-size: 1rem;
   float: right;
 }
+
+.clip .clip-wrapper:after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
 
 button.delete {
   background: #f00;
