@@ -57,17 +57,39 @@ if (navigator.mediaDevices.getUserMedia) {
       var values = [].filter.call(document.querySelectorAll('.mixbox'), function(c) {
         return c.checked;
       }).map(function(c) {
-        return new Howl({
-          src: [c.dataset.url],
-          format: "webm"
-        });
+        console.log(c.dataset.url)
+        var xhr = new XMLHttpRequest();
+        var bufferSource = audioCtx.createBufferSource();
+
+        xhr.open('GET', c.dataset.url, true);
+        xhr.responseType = 'arraybuffer';
+        xhr.onload = function() {
+          // Make sure we get a successful response back.
+          var code = (xhr.status + '')[0];
+          if (code !== '0' && code !== '2' && code !== '3') {
+            console.log("Load audio error")
+            return;
+          }
+
+          audioCtx.decodeAudioData(xhr.response, function(buffer) {
+            if (buffer) {
+              console.log("audio loaded")
+              bufferSource.buffer = buffer;
+              bufferSource.connect(audioCtx.destination);
+            }
+          });
+        };
+
+        xhr.send();
+
+        return bufferSource;
       });
 
       // ES6
       // var values = [].filter.call(mixingClips, (c) => c.checked).map(c => c.value);
 
       values.map(function(c) {
-        c.play();
+        c.start();
       })
     }
 
