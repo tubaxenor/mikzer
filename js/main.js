@@ -5,11 +5,79 @@ var mix = document.querySelector('.mix');
 var soundClips = document.querySelector('.sound-clips');
 var canvas = document.querySelector('.visualizer');
 var mainSection = document.querySelector('.main-controls');
+var timer = document.querySelector('.timer');
 
 // visualiser setup - create web audio api context and canvas
 
 var audioCtx = new (window.AudioContext || webkitAudioContext)();
 var canvasCtx = canvas.getContext("2d");
+
+// Timer
+
+function Timer(interval) {
+  this.interval = interval;
+  this.onStart = null;
+  this.onStop = null;
+  var expected, timeout;
+  var that = this;
+
+  this.start = function() {
+    expected = Date.now() + this.interval;
+    timeout = setTimeout(step, this.interval);
+  }
+
+  this.stop = function() {
+    clearTimeout(timeout);
+    if (this.onStop !== null) {
+      this.onStop();
+    }
+  }
+
+  function step() {
+    var drift = Date.now() - expected;
+    if (drift > that.interval) {
+      // You could have some default stuff here too...
+      console.log("Timer Error!")
+    }
+    expected += that.interval;
+
+    if (that.onStart !== null) {
+      that.onStart();
+    }
+    timeout = setTimeout(step, Math.max(0, that.interval - drift));
+  }
+}
+
+Timer.prototype.onStart = function(onStart) {
+  this.onStart = onStart;
+}
+
+Timer.prototype.onStop = function(onStop) {
+  this.onStop = onStop;
+}
+
+var timeTicker = new Timer(1000);
+var timerElapsed = 0;
+
+function pad(number) {
+  return number < 10 ? ("0" + number) : number
+}
+
+timeTicker.onStart = function(){
+  timerElapsed++;
+
+  var totalSeconds = timerElapsed;
+  var minutes = Math.floor(totalSeconds / 60);
+  var seconds = totalSeconds - minutes * 60;
+
+  timer.innerHTML = pad(minutes) + ':' + pad(seconds);
+}
+
+timeTicker.onStop = function(){
+  timerElapsed = 0
+
+  timer.innerHTML = "00:00"
+}
 
 //main block for doing the audio recording
 
@@ -28,6 +96,7 @@ if (navigator.mediaDevices.getUserMedia) {
     record.onclick = function() {
       if(recording) {
         recording = false;
+        timeTicker.stop();
         mediaRecorder.stop();
         console.log(mediaRecorder.state);
         console.log("recorder stopped");
@@ -39,6 +108,7 @@ if (navigator.mediaDevices.getUserMedia) {
         mix.disabled = false;
       } else {
         recording = true;
+        timeTicker.start();
         mediaRecorder.start();
         console.log(mediaRecorder.state);
         console.log("recorder started");
@@ -50,6 +120,9 @@ if (navigator.mediaDevices.getUserMedia) {
     }
 
     mix.onclick = function() {
+      mix.disabled = true;
+
+      var played = 0;
       var values = [].filter.call(document.querySelectorAll('.mixbox'), function(c) {
         return c.checked;
       }).map(function(c) {
@@ -78,13 +151,21 @@ if (navigator.mediaDevices.getUserMedia) {
 
         xhr.send();
 
-        return bufferSource;
+        return bufferSource
       });
 
       // ES6
       // var values = [].filter.call(mixingClips, (c) => c.checked).map(c => c.value);
 
       values.map(function(c) {
+        c.onended = function(){
+          played++;
+
+          if(played == values.size) {
+            mix.disabled = false;
+          }
+        }
+
         c.start();
       })
     }
@@ -159,6 +240,10 @@ if (navigator.mediaDevices.getUserMedia) {
 
     mediaRecorder.ondataavailable = function(e) {
       chunks.push(e.data);
+    }
+
+    mediaRecorder.onstart = function(){
+
     }
   }
 
